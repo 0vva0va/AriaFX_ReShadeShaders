@@ -1,28 +1,41 @@
-// ------------------------------------------------------------------//
-//                           B(etter)FSMAA                           //
-//                                                                   //
-//  BFSMAA borrows code, and is based on the original FXAA and SMAA  //
-//		https://github.com/iryoku/smaa 								 //
-//-------------------------------------------------------------------//
+/*
+                            ▄▄▄▌                 ░▄▄▓▀▓▓▄              
+     ▄▄▄         ▄  ▄▄     ▀███        ▄▄▄      ▀███  █▒▒▌ ▄▄         ▄
+  ▄▓▓▀ ▀▓▓▄    ▄█▓█▀ ▀▓▓▄    ▀      ▄▓▓▀ ▀▓▓▄    ▓▓▓  ▀▄▀  ▀▓▓▓▄   ▄▓▓▓
+ ▒▒▒▌   ▐▒▒▌   ▒▒▒▌   ▐▒▒▌ ▀▒▒▒▀   ▒▒▒▌   ▐▒▒▌   ▒▒▒▄▄       ▐▒▒▒ ▒▒▒▌ 
+░░░░     ░░░   ░░░▌   █░░█  ░░░   ░░░░     ░░░   ░░░          ░░░░░░░  
+▀░░░▌   ▐░░░   ░░░▌    ▀▀   ░░░   ▀░░░▌   ▐░░░   ░░░         ▐░░░▀░░░▌ 
+ ▀▒▒▒   ▒▒▒▒   ▒▒▒▌         ▒▒▒▌   ▀▒▒▒   ▒▒▒▒   ▒▒▒▌        ▒▒▒▀ ▀▒▒▒ 
+   ▀▀▓▄▓▀▓▓▓▄ ▄▓▓▓█▄       ▄▓▓▓▓▄    ▀▀▓▄▓▀▓▓▓▄ ▄▓▓▓▓▄     ▄▓▀▀     ▀▀▓
+=======================================================================
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//_____________________________________________________________/\_______________________________________________________________
-//==============================================================================================================================
-//                                   Enhanced Subpixel Morphological Anti-Aliasing Component
-//==============================================================================================================================
+Standard SMAA for ReShade 
+
+
+Author : https://github.com/0vva0va
+
+
+Credits : 
+
+https://github.com/CeeJayDK/SweetFX/blob/master/Shaders/SweetFX/SMAA.fxh
+
+*/
+
+
+#include "AriaFX/AriaFX_Common.fxh"
+
 
 #if !defined(SMAA_PRESET_LOW) && !defined(SMAA_PRESET_MEDIUM) && !defined(SMAA_PRESET_HIGH) && !defined(SMAA_PRESET_ULTRA)
 #define SMAA_PRESET_CUSTOM 
 #endif
 
-//-----------------------------//
-#include "Include/ReShadeUI.fxh"
-//-----------------------------//
 
-//**************************************************//
-//                  UNIFORMS                        //
-//**************************************************//
+// -------------------------------------------------------------------
+// -------------------------------------------------------------------
+// -------------------------------------------------------------------
+
+//--- UNIFORM VARIABLES ---@/
+//-------------------------@/
 
 uniform int _EdgeDetectionType < __UNIFORM_COMBO_INT1
     ui_category = "SMAA Settings";
@@ -109,9 +122,8 @@ uniform int _DebugOutput < __UNIFORM_COMBO_INT1
 
 
 
-//**************************************************//
-//                   DEFINES                        //
-//**************************************************//
+//--- SMAA DEFINES ---@/
+//--------------------@/
 
 #ifdef SMAA_PRESET_CUSTOM
 	#define SMAA_THRESHOLD             _EdgeDetectionThreshold
@@ -143,14 +155,15 @@ uniform int _DebugOutput < __UNIFORM_COMBO_INT1
 	#define SMAAGather(tex, coord) tex2Dgather(tex, coord, 0)
 #endif
 
-//-------------------------------- //
-#include "Include/SMAA.fxh"
-#include "Include/BMPYM_Common.fxh"
-//--------------------------------//
 
-//**************************************************//
-//                   TEXTURES                       //
-//**************************************************//
+// -------------------------------------------------------------------
+// -------------------------------------------------------------------
+// -------------------------------------------------------------------
+
+#include "AriaFX/SMAA.fxh"
+
+//--- TEXTURES ---@/
+//----------------@/
 
 texture edgesTex < pooled = true; > { Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT; Format = RG8; };
 texture blendTex < pooled = true; > { Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT; Format = RGBA8; };
@@ -169,47 +182,43 @@ sampler searchSampler       { Texture = searchTex; AddressU = Clamp; AddressV = 
 
 
 
-//**************************************************//
-//                 VERTEX SHADERS                   //
-//**************************************************//
+// -------------------------------------------------------------------
+// -------------------------------------------------------------------
+// -------------------------------------------------------------------
 
-void SMAAEdgeDetectionWrapVS(in uint id : SV_VertexID, out float4 position : SV_POSITION, out float2 texcoord : TEXCOORD0, out float4 offset[3] : TEXCOORD1)
-{
+//--- VERTEX ---@/
+//--------------@/
+
+void SMAAEdgeDetectionWrapVS(in uint id : SV_VertexID, out float4 position : SV_POSITION, out float2 texcoord : TEXCOORD0, out float4 offset[3] : TEXCOORD1) {
 	PostProcessVS(id, position, texcoord);
 	SMAAEdgeDetectionVS(texcoord, offset);
 }
 
 
-void SMAABlendingWeightCalculationWrapVS(in uint id : SV_VertexID, out float4 position : SV_POSITION, out float2 texcoord : TEXCOORD0, out float2 pixcoord : TEXCOORD1, out float4 offset[3] : TEXCOORD2)
-{
+void SMAABlendingWeightCalculationWrapVS(in uint id : SV_VertexID, out float4 position : SV_POSITION, 
+                                         out float2 texcoord : TEXCOORD0, out float2 pixcoord : TEXCOORD1, out float4 offset[3] : TEXCOORD2) {
 	PostProcessVS(id, position, texcoord);
 	SMAABlendingWeightCalculationVS(texcoord, pixcoord, offset);
 }
 
 
-void SMAANeighborhoodBlendingWrapVS(in uint id : SV_VertexID, out float4 position : SV_POSITION, out float2 texcoord : TEXCOORD0, out float4 offset : TEXCOORD1)
-{
+void SMAANeighborhoodBlendingWrapVS(in uint id : SV_VertexID, out float4 position : SV_POSITION, out float2 texcoord : TEXCOORD0, out float4 offset : TEXCOORD1) {
 	PostProcessVS(id, position, texcoord);
 	SMAANeighborhoodBlendingVS(texcoord, offset);
 }
 
 
+//--- PIXEL ---@/
+//-------------@/
 
-//**************************************************//
-//                 PIXEL SHADERS                    //
-//**************************************************//
-
-float SMAADepthLinearizationPS(float4 position : SV_POSITION, float2 texcoord : TEXCOORD) : SV_TARGET
-{
+float SMAADepthLinearizationPS(float4 position : SV_POSITION, float2 texcoord : TEXCOORD) : SV_TARGET {
 	return ReShade::GetLinearizedDepth(texcoord);
 }
 
 
-float2 SMAAEdgeDetectionWrapPS(float4 position : SV_POSITION, float2 texcoord : TEXCOORD0, float4 offset[3] : TEXCOORD1) : SV_TARGET
-{
-	if (SMAA_PREDICATION)
-	{
-		if      (_EdgeDetectionType == 0) 
+float2 SMAAEdgeDetectionWrapPS(float4 position : SV_POSITION, float2 texcoord : TEXCOORD0, float4 offset[3] : TEXCOORD1) : SV_TARGET {
+	if (SMAA_PREDICATION) {
+		if (_EdgeDetectionType == 0) 
 			return SMAALumaEdgePredicationDetectionPS(texcoord, offset, colourGammaSampler, depthLinearSampler);
 
 		else if (_EdgeDetectionType == 1) 
@@ -217,14 +226,13 @@ float2 SMAAEdgeDetectionWrapPS(float4 position : SV_POSITION, float2 texcoord : 
 
 		else if (_EdgeDetectionType == 2) 
 			return (SMAAColorEdgePredicationDetectionPS(texcoord, offset, colourGammaSampler, depthLinearSampler) 
-				 && SMAALumaEdgePredicationDetectionPS(texcoord, offset, colourGammaSampler, depthLinearSampler));
-				 
+				 && SMAALumaEdgePredicationDetectionPS(texcoord, offset, colourGammaSampler, depthLinearSampler)); 
 		else                             
 			return ((SMAALumaEdgePredicationDetectionPS(texcoord, offset, colourGammaSampler, depthLinearSampler) 
 				   + SMAAColorEdgePredicationDetectionPS(texcoord, offset, colourGammaSampler, depthLinearSampler)) / 2);
 	}
 
-	if      (_EdgeDetectionType == 0) 
+	if (_EdgeDetectionType == 0) 
 		return SMAALumaEdgeDetectionPS(texcoord, offset, colourGammaSampler);
 
 	else if (_EdgeDetectionType == 1) 
@@ -240,218 +248,62 @@ float2 SMAAEdgeDetectionWrapPS(float4 position : SV_POSITION, float2 texcoord : 
 }
 
 
-float4 SMAABlendingWeightCalculationWrapPS(float4 position : SV_POSITION, float2 texcoord : TEXCOORD0, float2 pixcoord : TEXCOORD1, float4 offset[3] : TEXCOORD2) : SV_TARGET
-{
+float4 SMAABlendingWeightCalculationWrapPS(float4 position : SV_POSITION, 
+										   float2 texcoord : TEXCOORD0, float2 pixcoord : TEXCOORD1, float4 offset[3] : TEXCOORD2) : SV_TARGET {
 	return SMAABlendingWeightCalculationPS(texcoord, pixcoord, offset, edgesSampler, areaSampler, searchSampler, 0.0);
 }
 
 
-float3 SMAANeighborhoodBlendingWrapPS(float4 position : SV_POSITION, float2 texcoord : TEXCOORD0, float4 offset : TEXCOORD1) : SV_TARGET
-{
+float3 SMAANeighborhoodBlendingWrapPS(float4 position : SV_POSITION, float2 texcoord : TEXCOORD0, float4 offset : TEXCOORD1) : SV_TARGET {
 	if (_DebugOutput == 1) return tex2D(edgesSampler, texcoord).rgb;
 	if (_DebugOutput == 2) return tex2D(blendSampler, texcoord).rgb;
 
 	return SMAANeighborhoodBlendingPS(texcoord, offset, colourLinearSampler, blendSampler).rgb;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//_____________________________________________________________/\_______________________________________________________________
-//==============================================================================================================================
-//                                           Fast Approximate Anti-Aliasing Component
-//==============================================================================================================================
-
-//**************************************************//
-//                  UNIFORMS                        //
-//**************************************************//
-
-uniform float _Subpix < __UNIFORM_SLIDER_FLOAT1
-    ui_category = "FXAA Settings";
-    ui_category_closed = true;
-	ui_min = 0.0; ui_max = 1.0;
-	ui_tooltip = "Amount of sub-pixel aliasing removal. Higher values makes the image softer/blurrier";
-> = 0.25;
-
-uniform float _EdgeThreshold < __UNIFORM_SLIDER_FLOAT1
-    ui_category = "FXAA Settings";
-    ui_category_closed = true;
-	ui_min = 0.0; ui_max = 1.0;
-	ui_label   = "Edge Detection Threshold";
-	ui_tooltip = "The minimum amount of local contrast required to apply algorithm";
-> = 0.125;
-
-uniform float _EdgeThresholdMin < __UNIFORM_SLIDER_FLOAT1
-    ui_category = "FXAA Settings";
-    ui_category_closed = true;
-	ui_min = 0.0; ui_max = 1.0;
-	ui_label   = "Darkness Threshold";
-	ui_tooltip = "Pixels darker than this are not processed in order to increase performance";
-> = 0.0;
-
-
-#ifndef FXAA_QUALITY__PRESET
-	// Valid Quality Presets
-	// 10 to 15 - default medium dither (10=fastest, 15=highest quality)
-	// 20 to 29 - less dither, more expensive (20=fastest, 29=highest quality)
-	// 39       - no dither, very expensive
-	#define FXAA_QUALITY__PRESET 29
-#endif
-
-#ifndef FXAA_GREEN_AS_LUMA
-	#define FXAA_GREEN_AS_LUMA 0
-#endif
-
-#ifndef FXAA_LINEAR_LIGHT
-	#define FXAA_LINEAR_LIGHT 0
-#endif
-
-
-#if (__RENDERER__ == 0xb000 || __RENDERER__ == 0xb100)
-	#define FXAA_GATHER4_ALPHA 1
-	#define FxaaTexAlpha4(t, p)       tex2Dgather(t, p, 3)
-	#define FxaaTexOffAlpha4(t, p, o) tex2Dgatheroffset(t, p, o, 3)
-	#define FxaaTexGreen4(t, p)       tex2Dgather(t, p, 1)
-	#define FxaaTexOffGreen4(t, p, o) tex2Dgatheroffset(t, p, o, 1)
-#endif
-
-#define FXAA_PC     1
-#define FXAA_HLSL_3 1
-
-// Green as luma requires non-linear colourspace
-#if FXAA_GREEN_AS_LUMA
-	#undef FXAA_LINEAR_LIGHT
-#endif
-
-//-----------------//
-#include "FXAA.fxh"
-//-----------------//
-
-sampler FXAATexture
-{
-	Texture   = ReShade::BackBufferTex;
-	MinFilter = Linear; 
-	MagFilter = Linear;
-	#if FXAA_LINEAR_LIGHT
-		SRGBTexture = true;
-	#endif
-};
-
-
-
-//**************************************************//
-//                 PIXEL SHADERS                    //
-//**************************************************//
-
-#if !FXAA_GREEN_AS_LUMA
-float4 FXAALumaPass(float4 position : SV_POSITION, float2 texcoord : TEXCOORD) : SV_TARGET
-{
-	float4 sColour = tex2D(ReShade::BackBuffer, texcoord.xy);
-	sColour.a      = sqrt(Common::Luminance(sColour.rgb * sColour.rgb));
-
-	return sColour;
-}
-#endif
-
-
-float4 FXAAPixelShader(float4 position : SV_POSITION, float2 texcoord : TEXCOORD) : SV_TARGET
-{
-	return FxaaPixelShader(
-		texcoord, 			// pos
-		0, 					// fxaaConsolePosPos
-		FXAATexture, 		// tex
-		FXAATexture, 		// fxaaConsole360TexExpBiasNegOne
-		FXAATexture, 		// fxaaConsole360TexExpBiasNegTwo
-		BUFFER_PIXEL_SIZE, 	// fxaaQualityRcpFrame
-		0, 					// fxaaConsoleRcpFrameOpt
-		0, 					// fxaaConsoleRcpFrameOpt2
-		0, 					// fxaaConsole360RcpFrameOpt2
-		_Subpix, 			// fxaaQualitySubpix
-		_EdgeThreshold, 	// fxaaQualityEdgeThreshold
-		_EdgeThresholdMin, 	// fxaaQualityEdgeThresholdMin
-		0, 					// fxaaConsoleEdgeSharpness
-		0, 				    // fxaaConsole_EdgeThreshold
-		0, 					// fxaaConsole_EdgeThresholdMin
-		0 					// fxaaConsole360ConstDir
-	);
-}
-
-
 
 //**************************************************//
 //                  TECHNIQUES                      //
 //**************************************************//
 
-technique BMPYM_BFSMAA < 
-    ui_label   = "BMPYM BFSMAA";
-    ui_tooltip =        
-        "                    BMPYM - B(etter)FSMAA                    \n"
-        "_____________________________________________________________\n"
-        "\n"
-        "A high quality anti-aliasing solution, combining SMAA & FXAA \n"
-        "in one shader.                     						  \n"
-		"Best combined with some sharpening  as the image may blur.	  \n"
-        "\n"
-        "_____________________________________________________________";
+technique AriaFXSMAA < 
+    ui_label   = "AriaFX: SMAA";
+    ui_tooltip = "Standard SMAA Anti Aliasing Solution";
 >
 {
 #if SMAA_PREDICATION
-	pass LinearizeDepthPass
-	{
+	pass LinearizeDepthPass {
 		VertexShader = PostProcessVS;
 		PixelShader  = SMAADepthLinearizationPS;
 		RenderTarget = depthTex;
 	}
 #endif
 
-	pass EdgeDetectionPass
-	{
+	pass EdgeDetectionPass {
 		VertexShader = SMAAEdgeDetectionWrapVS;
 		PixelShader  = SMAAEdgeDetectionWrapPS;
 		RenderTarget = edgesTex;
-
 		ClearRenderTargets = true;
-
 		StencilEnable = true;
 		StencilPass   = REPLACE;
 		StencilRef    = 1;
 	}
 
-	pass BlendWeightCalculationPass
-	{
+	pass BlendWeightCalculationPass	{
 		VertexShader = SMAABlendingWeightCalculationWrapVS;
 		PixelShader  = SMAABlendingWeightCalculationWrapPS;
 		RenderTarget = blendTex;
-
 		ClearRenderTargets = true;
-
 		StencilEnable = true;
 		StencilPass   = KEEP;
 		StencilFunc   = EQUAL;
 		StencilRef    = 1;
 	}
 
-	pass NeighborhoodBlendingPass
-	{
+	pass NeighborhoodBlendingPass {
 		VertexShader    = SMAANeighborhoodBlendingWrapVS;
 		PixelShader     = SMAANeighborhoodBlendingWrapPS;
 		StencilEnable   = false;
 		SRGBWriteEnable = true;
-	}
-
-#if !FXAA_GREEN_AS_LUMA
-	pass
-	{
-		VertexShader = PostProcessVS;
-		PixelShader  = FXAALumaPass;
-	}
-#endif
-
-	pass
-	{
-		VertexShader = PostProcessVS;
-		PixelShader  = FXAAPixelShader;
-		#if FXAA_LINEAR_LIGHT
-			SRGBWriteEnable = true;
-		#endif
 	}
 }
