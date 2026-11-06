@@ -134,9 +134,9 @@ float inverseEotfSt2084(float v, float exponentScaleFactor = 1.0) {
 // Reference: ITU-T T.302 (https://www.itu.int/rec/T-REC-T.302/en)
 // -----------------------------------------------------------------------------
 float3 rgbToICtCp(float3 rgb) {// Input: linear Rec.2020
-    float l = (rgb.r * 1688.0 + rgb.g * 2146.0 + rgb.g * 262.0)  / 4096.0;
-    float m = (rgb.r * 683.0  + rgb.g * 2951.0 + rgb.g * 462.0)  / 4096.0;
-    float s = (rgb.r * 99.0   + rgb.g * 309.0  + rgb.g * 3688.0) / 4096.0;
+    float l = (rgb.r * 1688.0 + rgb.g * 2146.0 + rgb.b * 262.0)  / 4096.0;
+    float m = (rgb.r * 683.0  + rgb.g * 2951.0 + rgb.b * 462.0)  / 4096.0;
+    float s = (rgb.r * 99.0   + rgb.g * 309.0  + rgb.b * 3688.0) / 4096.0;
 
     float lPQ = inverseEotfSt2084(l);
     float mPQ = inverseEotfSt2084(m);
